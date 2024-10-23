@@ -7,7 +7,13 @@ int my_strlen(char *str) {
      */
 
     // IMPLEMENT YOUR CODE HERE
-    return 0;
+    int count=0;
+    while('\0'!=*str)
+    {
+        count++;
+        str++;
+    }
+    return count;
 }
 
 
@@ -19,11 +25,22 @@ void my_strcat(char *str_1, char *str_2) {
      */
 
     // IMPLEMENT YOUR CODE HERE
+    while(*str_1!='\0')
+    {
+        str_1++;
+    }
+    while(*str_2!='\0')
+    {
+        *str_1=*str_2;
+        str_1++;
+        str_2++;
+    }
+    *str_1='\0';
 }
-
 
 // 练习3，实现库函数strstr
 char* my_strstr(char *s, char *p) {
+
     /**
      * 在字符串s中搜索字符串p，如果存在就返回第一次找到的地址，不存在就返回空指针(0)。
      * 例如：
@@ -31,8 +48,37 @@ char* my_strstr(char *s, char *p) {
      */
 
     // IMPLEMENT YOUR CODE HERE
-    return 0;
+    
+    // 如果 p 是空字符串，直接返回 s
+    if (*p=='\0') 
+    {
+        return s;
+    }
+
+    // 遍历字符串 s
+    for (; *s; s++) {
+        // 保存当前比较的起始位置
+        char *s_start = s;
+        char *p_temp = p;
+
+        // 比较 s 中从当前位置开始的子串和 p
+        while (*s_start!='\0'&&*p_temp!='\0'&&*s_start == *p_temp) 
+        {          
+            s_start++;
+            p_temp++;
+        }
+
+        // 如果 p 已经完全匹配
+        if (*p_temp=='\0') 
+        {
+        return s;// 返回第一次找到的位置
+        }
+    }
+
+    // 如果未找到匹配的子串，返回 0
+    return 0;  
 }
+
 
 
 /**
@@ -97,6 +143,22 @@ void rgb2gray(float *in, float *out, int h, int w) {
 
     // IMPLEMENT YOUR CODE HERE
     // ...
+    float grey;
+    for(int i=0;i<h;i++)
+    {
+        for(int j=0;j<w;j++)
+        {
+            int position=(i*w+j)*3;
+
+            float r=in[position];
+            float g=in[position+1];
+            float b=in[position+2];
+
+            float grey= 0.1140 * b + 0.5870 * g + 0.2989 * r;
+
+            out[i*w+j]=grey;
+        }
+    }
 }
 
 // 练习5，实现图像处理算法 resize：缩小或放大图像
@@ -129,7 +191,7 @@ void resize(float *in, float *out, int h, int w, int c, float scale) {
      *      如下图（看起来是在一条直线上就是在一条直线上）
      *
      *          P1(x1, y2)                      P2(x2, y2)
-     *              *                               *
+     *              *         记                       *
      *
      *                              * P(x, y)
      *
@@ -161,7 +223,7 @@ void resize(float *in, float *out, int h, int w, int c, float scale) {
      *                    y2 - y1         y2 - y1
      *
      *      2.3 化简：
-     *          记 Dx = x2 - x1, Dy = y2 - y1, dx = x - x1, dy = y - y1，
+     *          Dx = x2 - x1, Dy = y2 - y1, dx = x - x1, dy = y - y1，
      *
      *                     (Dx - dx)(Dy - dy)         dx(Dy - dy)
      *          Q = P1 * ———————————————————— + P2 * ————————————— +
@@ -198,9 +260,46 @@ void resize(float *in, float *out, int h, int w, int c, float scale) {
 
     int new_h = h * scale, new_w = w * scale;
     // IMPLEMENT YOUR CODE HERE
+    for(int y=0;y<new_h;y++)
+    {
+        for(int x=0;x<new_w;x++)
+        {
+            float x0=x/scale;
+            float y0=y/scale;
+            int x1=static_cast<int>(x0);
+            int y1=static_cast<int>(y0);
+            int x2=x1+1;
+            int y2=x2=1;
 
+            if(x1<0)
+            x1=0;
+            if(y1<0)
+            y1=0;
+            if(x2>=w)
+            x2=w-1;
+            if(y2>=h)
+            y2=h-1;
+
+             // 遍历每个通道
+            for (int channel = 0; channel < c; channel++) {
+                // 获取四个邻居点的像素值
+                float p1 = in[(y1 * w + x1) * c + channel];
+                float p2 = in[(y1 * w + x2) * c + channel];
+                float p3 = in[(y2 * w + x1) * c + channel];
+                float p4 = in[(y2 * w + x2) * c + channel];
+
+                // 计算目标图像中当前像素点的值
+                float dx = x0 - x1;
+                float dy = y0 - y1;
+                float interpolatedValue = p1 * (1 - dx) * (1 - dy) +p2 * dx * (1 - dy) +p3 * (1 - dx) * dy + p4 * dx * dy;
+
+                // 将计算得到的像素值存储到输出图像的数据中
+                int index = (y * new_w + x) * c + channel;
+                out[index] = interpolatedValue;
+             }
+         }
+     }
 }
-
 
 // 练习6，实现图像处理算法：直方图均衡化
 void hist_eq(float *in, int h, int w) {
@@ -219,6 +318,25 @@ void hist_eq(float *in, int h, int w) {
      * (2) 灰度级个数为256，也就是{0, 1, 2, 3, ..., 255}
      * (3) 使用数组来实现灰度级 => 灰度级的映射
      */
-
     // IMPLEMENT YOUR CODE HERE
+ 
+    // (1) 计算直方图
+    int hist[256] = {0};
+    for (int i = 0; i < h * w; i++) {
+        hist[(int)in[i]]++;
+    }
+
+    // (2) 计算累积直方图
+    float cum_sum[256] = {0};
+    float sum = 0;
+    for (int i = 0; i < 256; i++) {
+        sum += hist[i];
+        cum_sum[i] = sum / (h * w);
+    }
+
+    // (3) 映射函数，将原始灰度值映射到新的灰度值
+    for (int i = 0; i < h * w; i++) {
+        in[i] = cum_sum[(int)in[i]] * 255;
+    }
+
 }
